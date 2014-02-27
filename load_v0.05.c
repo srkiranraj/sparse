@@ -3,6 +3,7 @@
 ---------------------------------------*/
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "custom_utility.h"
 #include "custom_print.h"
 #include "custom_graph.h"
@@ -16,8 +17,8 @@ int main()
     /*---------------------------------------
     // Configurable Parameters
     ---------------------------------------*/    
-    int debug = 1;  // 1 => Debug Mode, 0 => Production Mode
-    int isBig = 0;  // 1 => Input is Big, 0 => Small
+    int debug = 0;  // 1 => Debug Mode, 0 => Production Mode
+    int isBig = 1;  // 1 => Input is Big, 0 => Small
     int k = 3;      // Minimum number of edges for each vertices in G1
 
     /*---------------------------------------
@@ -34,6 +35,7 @@ int main()
     int j = 0;
     int dummy, temp = 0;
     int src, dest;
+    int iterations;
 
     /*---------------------------------------
     // Problem Specific Parameters
@@ -62,7 +64,7 @@ int main()
 
     struct AdjListNode *tempNode;
     struct AdjListNode *tempNode1;
-
+    int *try1, *try2, *try3;
 
     printf("\n");
 
@@ -71,7 +73,7 @@ int main()
     // By reading the given sparse matrix A
     ---------------------------------------*/
     {
-        fp = fopen("./input/Stranke94_Symmetric.txt", "r");
+        fp = fopen("./input/G19_Symmetric.txt", "r");
         if(fp == NULL)
         {
             perror("Error while opening the file.\n");
@@ -200,10 +202,10 @@ int main()
 
         calculate_volume(G2, A2, V);
 
-        int *try1 = print_2darray(A, rows, cols, withRowSum, isBig, "Volume of G i.e A * A", tabspace);
+        try1 = print_2darray(A, rows, cols, withRowSum, isBig, "Volume of G i.e A * A", tabspace);
         print_2darray(A2, V, V, withRowSum, isBig, "Volume for G2 i.e A2 * A2", tabspace);
-        int *try2 = print_approx(A2, V, V, withRowSum, isBig, "Volume of G i.e A * A (Approx)", V, V, k, degree, edgeLoss1, edgeLoss2, tabspace);
-        print_to_file(try1, try2, V, "Load Comparison: Original Sparse Matrix Vs. Approximated Sparse Matrix");
+        dummyEdgeLoss = (int *)calloc(V, sizeof(int));
+        try2 = print_approx(A2, V, V, withRowSum, isBig, "Volume of G i.e A * A (Approx)", V, V, k, degree, edgeLoss1, edgeLoss2, dummyEdgeLoss, tabspace);
     }
 
     /*---------------------------------------
@@ -214,24 +216,37 @@ int main()
     // approximated volume.
     ---------------------------------------*/
     {
-        dummyEdgeLoss = (int *)calloc(V, sizeof(int));
-        SA = (int **)malloc(V * sizeof(int *));
+        iterations = (int)log(V);
+        printf("ITERATIONS :: %d\n", iterations);
+        struct Graph* TG[iterations];
+        struct Graph* MSG[iterations];  
 
-        for (i = 0; i < V; i++)
-            SA[i] = (int *)calloc(V, sizeof(int));
+        TG[3] = createGraph(V);
+        subtract_graphs(TG[3], G, G2);    
 
-        SG = createGraph(V);
-        subtract_graphs(SG, G, G2);
-        printGraph(SG);
+        MSG[3] = createGraph(V);
+        compute_max_bp_subgraph(MSG[3], TG[3], dummyEdgeLoss, debug);
 
-        MSG = createGraph(V);
-        compute_max_bp_subgraph(MSG, SG, dummyEdgeLoss, debug);
-        printGraph(MSG);
+        calculate_volume(MSG[3], A2, V);
 
-        calculate_volume(MSG, A2, V);
-        print_2darray(A2, V, V, withRowSum, isBig, "Volume for G3 i.e (G - G3) * (G - G3)", tabspace);
 
-        print_approx(A2, V, V, withRowSum, isBig, "Volume of G i.e A * A (Approx) after I iteration", V, V, k, degree, edgeLoss1, edgeLoss2, tabspace);
+        for (i = 4; i <= iterations; ++i)
+        {
+            TG[i] = createGraph(V);
+            subtract_graphs(TG[i], TG[i-1], MSG[i-1]);
+
+            MSG[i] = createGraph(V);
+            compute_max_bp_subgraph(MSG[i], TG[i], dummyEdgeLoss, debug);
+
+            calculate_volume(MSG[i], A2, V);
+        }
+
+        // print_2darray(A2, V, V, withRowSum, isBig, "Volume for G3 i.e (G - G3) * (G - G3)", tabspace);
+        print_1darray(dummyEdgeLoss, 0, V, "Cumulative Edge Loss", newline);
+        try3 = print_approx(A2, V, V, withRowSum, isBig, "Volume of G i.e A * A (Approx) after Log N iteration", V, V, k, degree, edgeLoss1, edgeLoss2, dummyEdgeLoss, tabspace);
+
+        print_to_file_2(try1, try3, V, "Load Comparison: Original Sparse Matrix Vs. Approximated Sparse Matrix");
+        // print_to_file_3(try1, try2, try3, V, "Load Comparison: Original Sparse Matrix Vs. Approximated Sparse Matrix");
     }
  
     return 0;
