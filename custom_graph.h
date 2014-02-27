@@ -342,7 +342,7 @@ void calculate_volume(struct Graph* graph, int **A, int rows)
 // I. Removal of vertex with low degree
 // II. Greedy bi-partite construction
 ---------------------------------------*/
-int* print_approx(int **A2, int rows, int cols, int withRowSum, int onlyRowSum, char *title, int actual_rows, int actual_cols, int k, int *degree, int *edgeLoss1, int *edgeLoss2, char *space)
+int* print_approx(int **A2, int rows, int cols, int withRowSum, int onlyRowSum, char *title, int actual_rows, int actual_cols, int k, int *degree, int *edgeLoss1, int *edgeLoss2, int *edgeLoss3, char *space)
 {
     int i, j;
     int rowSum = 0;
@@ -367,7 +367,7 @@ int* print_approx(int **A2, int rows, int cols, int withRowSum, int onlyRowSum, 
         }
         if(withRowSum)
         {
-            rowSum = rowSum + edgeLoss2[i] * average_degree + edgeLoss1[i] * k;
+            rowSum = rowSum + edgeLoss2[i] * average_degree + edgeLoss1[i] * k + edgeLoss3[i] * 0.50 * average_degree;
             printf("=> %d", rowSum);
         }
         rs[i] = rowSum;
